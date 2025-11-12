@@ -1,0 +1,7 @@
+pyspark
+streamlit
+pymongo
+apache-airflow
+pandas
+numpy
+scikit-learn

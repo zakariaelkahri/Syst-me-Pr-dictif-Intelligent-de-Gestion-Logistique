@@ -1,0 +1,39 @@
+services:
+  # MongoDB
+  mongo:
+    image: mongo:6
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  # Airflow
+  airflow:
+    build: ./airflow
+    container_name: airflow
+    restart: always
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    ports:
+      - "8080:8080"
+    command: ["standalone"]
+
+  # PySpark + Streamlit
+  streamlit:
+    build: .
+    container_name: streamlit_app
+    depends_on:
+      - mongo
+      - airflow
+    ports:
+      - "8501:8501"
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      AIRFLOW_URL: http://airflow:8080
+
+volumes:
+  mongo_data:
