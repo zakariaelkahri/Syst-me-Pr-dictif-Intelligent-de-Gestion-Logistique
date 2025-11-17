@@ -16,24 +16,47 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: SequentialExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
     ports:
       - "8080:8080"
-    command: ["standalone"]
+    command: ["bash", "/opt/airflow/init-airflow.sh"]
 
-  # PySpark + Streamlit
-  streamlit:
-    build: .
-    container_name: streamlit_app
+  # # PySpark + Streamlit
+  # streamlit:
+  #   build: .
+  #   container_name: streamlit_app
+  #   depends_on:
+  #     - mongo
+  #     - airflow
+  #   ports:
+  #     - "8501:8501"
+  #   environment:
+  #     MONGO_URI: mongodb://mongo:27017
+  #     AIRFLOW_URL: http://airflow:8080
+
+  # Jupyter Lab with PySpark and Hadoop
+  jupyter:
+    build:
+      context: .
+      dockerfile: jupyter.Dockerfile
+    container_name: jupyter_lab
     depends_on:
       - mongo
-      - airflow
     ports:
-      - "8501:8501"
+      - "8888:8888"
     environment:
+      JUPYTER_ENABLE_LAB: "yes"
       MONGO_URI: mongodb://mongo:27017
-      AIRFLOW_URL: http://airflow:8080
+      GRANT_SUDO: "yes"
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+      SPARK_HOME: /usr/local/spark
+      HADOOP_HOME: /opt/hadoop
+      HADOOP_CONF_DIR: /opt/hadoop/etc/hadoop
+    volumes:
+      - ./app/notebooks:/home/jovyan/work
+      - ./app/data:/home/jovyan/data
 
 volumes:
   mongo_data:

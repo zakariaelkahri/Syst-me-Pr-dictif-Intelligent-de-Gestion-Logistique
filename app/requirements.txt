@@ -5,3 +5,10 @@ apache-airflow
 pandas
 numpy
 scikit-learn
+matplotlib
+seaborn
+jupyter
+jupyterlab
+ipywidgets
+plotly
+bokeh

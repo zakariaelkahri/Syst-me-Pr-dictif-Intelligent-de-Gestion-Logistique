@@ -13,14 +13,6 @@ ENV PATH=$JAVA_HOME/bin:$PATH
 # Set working directory
 WORKDIR /app
 
-RUN airflow users delete --username admin || true && \
-    airflow users create \
-        --username admin \
-        --firstname zakaria \
-        --lastname zakaria \
-        --role Admin \
-        --email zakaria@example.com \
-        --password MySecurePassword123
 COPY app/ /app/
 
 RUN pip install --upgrade pip && \
@@ -29,5 +21,5 @@ RUN pip install --upgrade pip && \
 # Expose Streamlit port
 EXPOSE 8501
 
-# Run Streamlit
-CMD ["streamlit", "run", "main.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# # Run Streamlit
+# CMD ["streamlit", "run", "main.py", "--server.port=8501", "--server.address=0.0.0.0"]
