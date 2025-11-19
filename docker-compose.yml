@@ -23,18 +23,21 @@ services:
       - "8080:8080"
     command: ["bash", "/opt/airflow/init-airflow.sh"]
 
-  # # PySpark + Streamlit
-  # streamlit:
-  #   build: .
-  #   container_name: streamlit_app
-  #   depends_on:
-  #     - mongo
-  #     - airflow
-  #   ports:
-  #     - "8501:8501"
-  #   environment:
-  #     MONGO_URI: mongodb://mongo:27017
-  #     AIRFLOW_URL: http://airflow:8080
+  # PySpark + Streamlit
+  streamlit:
+    build: .
+    container_name: streamlit_app
+    depends_on:
+      - mongo
+      - airflow
+    ports:
+      - "8501:8501"
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      AIRFLOW_URL: http://airflow:8080
+    volumes:
+      - ./app.py:/app/app.py          # map your Streamlit app
+      - ./models:/app/models   
 
   # Jupyter Lab with PySpark and Hadoop
   jupyter:
