@@ -39,7 +39,7 @@ services:
   # Jupyter Lab with PySpark and Hadoop
   jupyter:
     build:
-      context: .
+      context: ./app/notebooks
       dockerfile: jupyter.Dockerfile
     container_name: jupyter_lab
     depends_on:
