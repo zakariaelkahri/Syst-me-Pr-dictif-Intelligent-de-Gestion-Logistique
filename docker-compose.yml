@@ -36,8 +36,8 @@ services:
       MONGO_URI: mongodb://mongo:27017
       AIRFLOW_URL: http://airflow:8080
     volumes:
-      - ./app.py:/app/app.py          # map your Streamlit app
-      - ./models:/app/models   
+      - ./app/notebooks/app.py:/app/app.py          # map your Streamlit app
+      - ./app/notebooks/models:/app/models   
 
   # Jupyter Lab with PySpark and Hadoop
   jupyter:
@@ -60,6 +60,31 @@ services:
     volumes:
       - ./app/notebooks:/home/jovyan/work
       - ./app/data:/home/jovyan/data
+
+  # FastAPI Service
+  fastapi:
+    build: ./fastapi
+    container_name: fastapi_app
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      ENVIRONMENT: production
+      PYTHONPATH: /app
+    volumes:
+      - ./fastapi:/app
+      - ./app/notebooks/models:/app/models
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   mongo_data:
