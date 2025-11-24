@@ -9,35 +9,35 @@ services:
       - mongo_data:/data/db
 
   # Airflow
-  airflow:
-    build: ./airflow
-    container_name: airflow
-    restart: always
-    environment:
-      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
-      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-    ports:
-      - "8080:8080"
-    command: ["bash", "/opt/airflow/init-airflow.sh"]
+  # airflow:
+  #   build: ./airflow
+  #   container_name: airflow
+  #   restart: always
+  #   environment:
+  #     AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+  #     AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+  #     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
+  #   volumes:
+  #     - ./airflow/dags:/opt/airflow/dags
+  #   ports:
+  #     - "8080:8080"
+  #   command: ["bash", "/opt/airflow/init-airflow.sh"]
 
   # PySpark + Streamlit
-  streamlit:
-    build: .
-    container_name: streamlit_app
-    depends_on:
-      - mongo
-      - airflow
-    ports:
-      - "8501:8501"
-    environment:
-      MONGO_URI: mongodb://mongo:27017
-      AIRFLOW_URL: http://airflow:8080
-    volumes:
-      - ./app/notebooks/app.py:/app/app.py          # map your Streamlit app
-      - ./app/notebooks/models:/app/models   
+  # streamlit:
+  #   build: .
+  #   container_name: streamlit_app
+  #   depends_on:
+  #     - mongo
+  #     # - airflow
+  #   ports:
+  #     - "8501:8501"
+  #   environment:
+  #     MONGO_URI: mongodb://mongo:27017
+  #     AIRFLOW_URL: http://airflow:8080
+  #   volumes:
+  #     - ./app/notebooks/app.py:/app/app.py          # map your Streamlit app
+  #     - ./app/notebooks/models:/app/models   
 
   # Jupyter Lab with PySpark and Hadoop
   jupyter:
@@ -85,6 +85,27 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Spark Streaming Service
+  spark_streaming:
+    build: ./spark_streaming
+    container_name: spark_streaming
+    # restart: on-failure
+    depends_on:
+      - mongo
+      - fastapi
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      STREAM_HOST: fastapi_app
+      STREAM_PORT: 9999
+    volumes:
+      - ./spark_streaming:/app
+      - ./app/notebooks/models:/app/models
+    networks:
+      - default
+
+  # Data Generator Service
+
 
 volumes:
   mongo_data:

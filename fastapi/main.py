@@ -1,83 +1,82 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import os
-from typing import Optional, Dict, Any
-import uvicorn
+# fastapi/app.py
+from fastapi import FastAPI, WebSocket
+import socket
+import asyncio
+import json
+import random
+import threading
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Intelligent Logistics Management API",
-    description="API for predictive logistics management system",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+app = FastAPI()
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Random data options
+types = ["TRANSFER", "CASH", "PAYMENT", "DEBIT"]
+days_ship = list(range(1,5))
+category_id = list(range(2,77))
+customer_segment = ["Consumer", "Home Office", "Corporate"]
+order_qty = list(range(1,6))
+order_region = [
+    "Canada", "Caribbean", "Central Africa", "Central America",
+    "Central Asia", "East Africa", "Eastern Asia"
+]
+order_month = list(range(1,13))
 
-# Pydantic models
-class HealthResponse(BaseModel):
-    status: str
-    message: str
+# Spark connection (Docker network)
+spark_conn = None
 
-class PredictionRequest(BaseModel):
-    data: Dict[str, Any]
+def start_socket_server():
+    global spark_conn
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind(('0.0.0.0', 9999))
+    server.listen(1)
+    print("Socket server listening on port 9999")
+    while True:
+        try:
+            conn, addr = server.accept()
+            print(f"Spark connected from {addr}")
+            spark_conn = conn
+        except Exception as e:
+            print(f"Socket accept error: {e}")
 
-class PredictionResponse(BaseModel):
-    prediction: Any
-    confidence: Optional[float] = None
+# Start the server in a background thread
+threading.Thread(target=start_socket_server, daemon=True).start()
 
-# Routes
-@app.get("/", tags=["Root"])
-async def root():
-    """Root endpoint"""
-    return {"message": "Welcome to Intelligent Logistics Management API"}
+async def send_to_spark(data: dict):
+    global spark_conn
+    if spark_conn:
+        try:
+            spark_conn.send((json.dumps(data) + "\n").encode())
+        except Exception as e:
+            print(f"Error sending to Spark: {e}")
+            spark_conn = None
+    else:
+        # print("No Spark connection available")
+        pass
+    
 
-@app.get("/health", response_model=HealthResponse, tags=["Health"])
-async def health_check():
-    """Health check endpoint"""
-    return HealthResponse(
-        status="healthy",
-        message="FastAPI service is running"
-    )
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
-@app.post("/predict", response_model=PredictionResponse, tags=["Prediction"])
-async def predict(request: PredictionRequest):
-    """
-    Prediction endpoint for logistics optimization
-    """
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    
     try:
-        # This is where you would integrate with your ML models
-        # For now, return a dummy response
-        return PredictionResponse(
-            prediction="sample_prediction",
-            confidence=0.85
-        )
+        while True:
+            data = {
+                "Type": random.choice(types),
+                "Days for shipment (scheduled)": random.choice(days_ship),
+                "Category Id": random.choice(category_id),
+                "Customer Segment": random.choice(customer_segment),
+                "Order Item Quantity": random.choice(order_qty),
+                "Order Region": random.choice(order_region),
+                "order_month": random.choice(order_month)
+            }
+
+            await send_to_spark(data)
+            await websocket.send_text(f"Sent to Spark: {data}")
+            await asyncio.sleep(1)
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/status", tags=["Status"])
-async def api_status():
-    """API status information"""
-    return {
-        "api_version": "1.0.0",
-        "status": "active",
-        "mongo_uri": os.getenv("MONGO_URI", "Not configured"),
-        "environment": os.getenv("ENVIRONMENT", "development")
-    }
-
-if __name__ == "__main__":
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+        print("WebSocket error:", e)

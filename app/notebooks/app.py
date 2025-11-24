@@ -2,7 +2,8 @@ import streamlit as st
 from pyspark.sql import SparkSession
 from pyspark.ml.pipeline import PipelineModel
 from pyspark.ml.tuning import CrossValidatorModel
-
+from pyspark.sql.functions import from_json, col
+from pyspark.sql.types import *
 
 import pandas as pd
 
